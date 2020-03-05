@@ -4,7 +4,7 @@
 <% users.map((user) => { %>
   <li><%= user.id %> - <%= user.first_name %> <%= user.last_name %></li>
   <ul>
-    <% user.comments.map((comment) => { %>
+    <% user.Comments.map((comment) => { %>
       <li><%= comment.body %></li>
     <% }); %>
   </ul>

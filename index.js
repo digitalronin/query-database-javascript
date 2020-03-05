@@ -1,23 +1,27 @@
 const express = require('express')
 const path = require('path')
 const PORT = process.env.PORT || 5000
-const db = require('knex')({
-  client: 'pg',
-  connection: process.env.DATABASE_URL
-});
-const bookshelf = require('bookshelf')(db);
 
-const Comment = bookshelf.model('Comment', {
-  tableName: 'comments'
-});
+const { Sequelize, DataTypes } = require('sequelize');
+const sequelize = new Sequelize(process.env.DATABASE_URL);
 
-const User = bookshelf.model('User', {
+const User = sequelize.define('User', {
+  first_name: { type: DataTypes.STRING },
+  last_name: { type: DataTypes.STRING },
+  email: { type: DataTypes.STRING }
+}, {
   tableName: 'users',
-  comments() {
-    // by default, bookshelf infers that the foreign key is 'user_id'
-    return this.hasMany('Comment');
-  }
+  timestamps: false
 });
+
+const Comment = sequelize.define('Comment', {
+  body: { type: DataTypes.STRING }
+}, {
+  tableName: 'comments',
+  timestamps: false
+});
+
+User.hasMany(Comment, { foreignKey: 'user_id' });
 
 express()
   .set('views', path.join(__dirname, 'views'))
@@ -27,23 +31,7 @@ express()
 
 async function listUsers(req, res) {
   try {
-    const models = await new User()
-      .fetchPage({
-        pageSize: 5,
-        page: 1,
-        withRelated: ['comments']
-      });
-
-    users = [];
-
-    models.map(m => {
-      const user = m.attributes;
-      const comments = m.related('comments');
-      user.comments = comments.map(c => c.attributes);
-
-      users.push(user);
-    });
-
+    const users = await User.findAll({ include: Comment });
     const results = { 'users': users };
     res.render('pages/index', results );
   } catch (err) {
