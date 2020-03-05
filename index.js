@@ -1,8 +1,10 @@
 const express = require('express')
 const path = require('path')
 const PORT = process.env.PORT || 5000
-const { Pool } = require('pg');
-const conn = new Pool({ connectionString: process.env.DATABASE_URL });
+const db = require('knex')({
+  client: 'pg',
+  connection: process.env.DATABASE_URL
+});
 
 express()
   .set('views', path.join(__dirname, 'views'))
@@ -12,11 +14,9 @@ express()
 
 async function listUsers(req, res) {
   try {
-    const db = await conn.connect()
-    const result = await db.query('SELECT * FROM users');
-    const results = { 'users': (result) ? result.rows : null};
+    const result = await db.select().from('users').limit(5).offset(5);
+    const results = { 'users': (result) ? result : null};
     res.render('pages/index', results );
-    db.release();
   } catch (err) {
     console.error(err);
     res.send("Error " + err);
