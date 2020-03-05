@@ -5,37 +5,19 @@ const db = require('knex')({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });
-const { Model } = require('objection');
-Model.knex(db);
+const bookshelf = require('bookshelf')(db);
 
-class Comment extends Model {
-  static get tableName() {
-    return 'comments';
-  }
-}
+const Comment = bookshelf.model('Comment', {
+  tableName: 'comments'
+});
 
-class User extends Model {
-  static get tableName() {
-    return 'users';
+const User = bookshelf.model('User', {
+  tableName: 'users',
+  comments() {
+    // by default, bookshelf infers that the foreign key is 'user_id'
+    return this.hasMany('Comment');
   }
-
-  fullName() {
-    return `${this.first_name} ${this.last_name}`;
-  }
-
-  static get relationMappings() {
-    return {
-      comments: {
-        relation: Model.HasManyRelation,
-        modelClass: Comment,
-        join: {
-          from: 'users.id',
-          to: 'comments.user_id'
-        }
-      }
-    };
-  }
-}
+});
 
 express()
   .set('views', path.join(__dirname, 'views'))
@@ -45,7 +27,23 @@ express()
 
 async function listUsers(req, res) {
   try {
-    const users = await User.query().limit(5).withGraphFetched('comments');
+    const models = await new User()
+      .fetchPage({
+        pageSize: 5,
+        page: 1,
+        withRelated: ['comments']
+      });
+
+    users = [];
+
+    models.map(m => {
+      const user = m.attributes;
+      const comments = m.related('comments');
+      user.comments = comments.map(c => c.attributes);
+
+      users.push(user);
+    });
+
     const results = { 'users': users };
     res.render('pages/index', results );
   } catch (err) {
