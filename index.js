@@ -5,6 +5,37 @@ const db = require('knex')({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });
+const { Model } = require('objection');
+Model.knex(db);
+
+class Comment extends Model {
+  static get tableName() {
+    return 'comments';
+  }
+}
+
+class User extends Model {
+  static get tableName() {
+    return 'users';
+  }
+
+  fullName() {
+    return `${this.first_name} ${this.last_name}`;
+  }
+
+  static get relationMappings() {
+    return {
+      comments: {
+        relation: Model.HasManyRelation,
+        modelClass: Comment,
+        join: {
+          from: 'users.id',
+          to: 'comments.user_id'
+        }
+      }
+    };
+  }
+}
 
 express()
   .set('views', path.join(__dirname, 'views'))
@@ -14,8 +45,12 @@ express()
 
 async function listUsers(req, res) {
   try {
-    const result = await db.select().from('users').limit(5).offset(5);
-    const results = { 'users': (result) ? result : null};
+    const users = await User.query().limit(5);
+    for (i in users) {
+      const user = users[i];
+      user.comments = await User.relatedQuery('comments').for(user.id);
+    }
+    const results = { 'users': users };
     res.render('pages/index', results );
   } catch (err) {
     console.error(err);
