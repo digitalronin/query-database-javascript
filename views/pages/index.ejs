@@ -2,6 +2,11 @@
 
 <ul>
 <% users.map((user) => { %>
-  <li><%= user.id %> - <%= user.first_name %> <%= user.last_name %></li>
+  <li><%= user.id %> - <%= user.fullName() %></li>
+  <ul>
+    <% user.comments.map((comment) => { %>
+      <li><%= comment.body %></li>
+    <% }); %>
+  </ul>
 <% }); %>
 </ul>
