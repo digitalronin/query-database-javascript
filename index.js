@@ -45,11 +45,7 @@ express()
 
 async function listUsers(req, res) {
   try {
-    const users = await User.query().limit(5);
-    for (i in users) {
-      const user = users[i];
-      user.comments = await User.relatedQuery('comments').for(user.id);
-    }
+    const users = await User.query().limit(5).withGraphFetched('comments');
     const results = { 'users': users };
     res.render('pages/index', results );
   } catch (err) {
